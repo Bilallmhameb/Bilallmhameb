@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArtCanvas Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.2.1/fabric.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f0f0f3;
+            --element-bg: #ffffff;
+            --text-color: #4a4a4a;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --element-bg: #2c2c2c;
+            --text-color: #e0e0e0;
+            --shadow-color: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .neumorphic {
+            background: var(--element-bg);
+            box-shadow: 5px 5px 10px var(--shadow-color), -5px -5px 10px var(--shadow-color);
+            border-radius: 15px;
+        }
+        .tool-btn {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tool-btn:hover {
+            transform: scale(1.1);
+        }
+        .tool-btn.active {
+            background: var(--bg-color);
+            box-shadow: inset 3px 3px 6px var(--shadow-color), inset -3px -3px 6px var(--shadow-color);
+        }
+        #canvas-container {
+            width: 100%;
+            height: calc(100vh - 120px);
+            overflow: hidden;
+        }
+        .background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.1;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <div class="background-animation"></div>
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold mb-4 text-center">ArtCanvas Pro</h1>
+        <div class="neumorphic p-4 mb-4 flex flex-wrap justify-center">
+            <button id="brush" class="tool-btn"><i class="fas fa-paint-brush"></i></button>
+            <button id="eraser" class="tool-btn"><i class="fas fa-eraser"></i></button>
+            <input type="color" id="color-picker" class="tool-btn">
+            <button id="rectangle" class="tool-btn"><i class="fas fa-square"></i></button>
+            <button id="circle" class="tool-btn"><i class="fas fa-circle"></i></button>
+            <button id="triangle" class="tool-btn"><i class="fas fa-play"></i></button>
+            <button id="line" class="tool-btn"><i class="fas fa-slash"></i></button>
+            <button id="text" class="tool-btn"><i class="fas fa-font"></i></button>
+            <button id="undo" class="tool-btn"><i class="fas fa-undo"></i></button>
+            <button id="redo" class="tool-btn"><i class="fas fa-redo"></i></button>
+            <button id="clear" class="tool-btn"><i class="fas fa-trash"></i></button>
+            <button id="save" class="tool-btn"><i class="fas fa-save"></i></button>
+            <button id="dark-mode-toggle" class="tool-btn"><i class="fas fa-moon"></i></button>
+        </div>
+        <div id="canvas-container" class="neumorphic">
+            <canvas id="canvas"></canvas>
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/your-fontawesome-kit.js" crossorigin="anonymous"></script>
+    <script>
+        // Initialize variables
+        let canvas, isDrawing = false, mode = 'brush', currentColor = '#000000';
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const body = document.body;
+
+        // Initialize Fabric.js canvas
+        canvas = new fabric.Canvas('canvas', {
+            isDrawingMode: true,
+            width: document.getElementById('canvas-container').offsetWidth,
+            height: document.getElementById('canvas-container').offsetHeight,
+        });
+
+        // Tool button click handlers
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                mode = this.id;
+                updateCanvasMode();
+            });
+        });
+
+        // Color picker handler
+        document.getElementById('color-picker').addEventListener('input', function(e) {
+            currentColor = e.target.value;
+            canvas.freeDrawingBrush.color = currentColor;
+        });
+
+        // Update canvas mode based on selected tool
+        function updateCanvasMode() {
+            canvas.isDrawingMode = mode === 'brush' || mode === 'eraser';
+            if (mode === 'eraser') {
+                canvas.freeDrawingBrush.color = '#ffffff';
+            } else {
+                canvas.freeDrawingBrush.color = currentColor;
+            }
+        }
+
+        // Shape drawing handlers
+        canvas.on('mouse:down', function(o) {
+            isDrawing = true;
+            let pointer = canvas.getPointer(o.e);
+            if (mode === 'rectangle') {
+                canvas.add(new fabric.Rect({
+                    left: pointer.x,
+                    top: pointer.y,
+                    width: 0,
+                    height: 0,
+                    fill: 'transparent',
+                    stroke: currentColor,
+                    strokeWidth: 2
+                }));
+            } else if (mode === 'circle') {
+                canvas.add(new fabric.Circle({
+                    left: pointer.x,
+                    top: pointer.y,
+                    radius: 0,
+                    fill: 'transparent',
+                    stroke: currentColor,
+                    strokeWidth: 2
+                }));
+            } else if (mode === 'triangle') {
+                canvas.add(new fabric.Triangle({
+                    left: pointer.x,
+                    top: pointer.y,
+                    width: 0,
+                    height: 0,
+                    fill: 'transparent',
+                    stroke: currentColor,
+                    strokeWidth: 2
+                }));
+            } else if (mode === 'line') {
+                canvas.add(new fabric.Line([pointer.x, pointer.y, pointer.x, pointer.y], {
+                    stroke: currentColor,
+                    strokeWidth: 2
+                }));
+            } else if (mode === 'text') {
+                canvas.add(new fabric.IText('أدخل النص هنا', {
+                    left: pointer.x,
+                    top: pointer.y,
+                    fontFamily: 'Arial',
+                    fill: currentColor,
+                    fontSize: 20
+                }));
+            }
+        });
+
+        canvas.on('mouse:move', function(o) {
+            if (!isDrawing) return;
+            let pointer = canvas.getPointer(o.e);
+            let activeObj = canvas.getActiveObject();
+            if (mode === 'rectangle' && activeObj) {
+                activeObj.set({ width: pointer.x - activeObj.left, height: pointer.y - activeObj.top });
+            } else if (mode === 'circle' && activeObj) {
+                activeObj.set({ radius: Math.abs(pointer.x - activeObj.left) / 2 });
+            } else if (mode === 'triangle' && activeObj) {
+                activeObj.set({ width: pointer.x - activeObj.left, height: pointer.y - activeObj.top });
+            } else if (mode === 'line' && activeObj) {
+                activeObj.set({ x2: pointer.x, y2: pointer.y });
+            }
+            canvas.renderAll();
+        });
+
+        canvas.on('mouse:up', function() {
+            isDrawing = false;
+        });
+
+        // Undo, Redo, Clear, and Save handlers
+        document.getElementById('undo').addEventListener('click', function() {
+            // Implement undo logic
+        });
+
+        document.getElementById('redo').addEventListener('click', function() {
+            // Implement redo logic
+        });
+
+        document.getElementById('clear').addEventListener('click', function() {
+            canvas.clear();
+        });
+
+        document.getElementById('save').addEventListener('click', function() {
+            const dataURL = canvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'artcanvas-drawing.png';
+            link.href = dataURL;
+            link.click();
+        });
+
+        // Dark mode toggle
+        darkModeToggle.addEventListener('click', function() {
+            body.classList.toggle('dark-mode');
+            this.innerHTML = body.classList.contains('dark-mode') ? 
+                '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+        });
+
+        // Background animation
+        function createBackgroundAnimation() {
+            const animation = document.querySelector('.background-animation');
+            for (let i = 0; i < 50; i++) {
+                const star = document.createElement('div');
+                star.classList.add('star');
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.animationDuration = `${Math.random() * 3 + 2}s`;
+                star.style.animationDelay = `${Math.random() * 2}s`;
+                animation.appendChild(star);
+            }
+        }
+
+        createBackgroundAnimation();
+
+        // Responsive canvas
+        window.addEventListener('resize', function() {
+            canvas.setDimensions({
+                width: document.getElementById('canvas-container').offsetWidth,
+                height: document.getElementById('canvas-container').offsetHeight
+            });
+        });
+    </script>
+</body>
+</html>
